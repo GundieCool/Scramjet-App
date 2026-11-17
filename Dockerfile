@@ -4,13 +4,13 @@ ENV NODE_ENV=production
 ARG NPM_BUILD="npm install --omit=dev"
 EXPOSE 8080/tcp
 
-LABEL maintainer="Mercury Workshop"
-LABEL summary="Scramjet Demo Image"
-LABEL description="Example application of Scramjet"
+LABEL maintainer="Fun Talk Club"
+LABEL summary=""
+LABEL description=""
 
 WORKDIR /app
 
-COPY ["package.json", "package-lock.json", "./"]
+COPY ["package.json", "./"]
 RUN apk add --upgrade --no-cache python3 make g++
 RUN $NPM_BUILD
 
