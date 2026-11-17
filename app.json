@@ -1,7 +1,7 @@
 {
-	"name": "Scramjet Demo",
-	"description": "Scramjet Demo App",
-	"repository": "https://github.com/.../Scramjet-Demo",
-	"logo": "https://raw.githubusercontent.com/MercuryWorkshop/scramjet/main/assets/scramjet.png",
-	"keywords": ["scramjet"]
+	"name": "Absolute Browser",
+	"description": "Absolute Browser by Fun Talk Club",
+	"repository": "https://github.com/GundieCool/Scramjet-Demo",
+	"logo": "",
+	"keywords": ["browser"]
 }
