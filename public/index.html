@@ -1,67 +1,97 @@
 <!doctype html>
-<html>
-	<head>
-		<meta charset="utf-8" />
-		<meta
-			name="viewport"
-			content="width=device-width, initial-scale=1.0, shrink-to-fit=no"
-		/>
-		<title>Scramjet</title>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no" />
+    <title>Absolute Browser — By Fun Talk Club</title>
 
-		<link rel="shortcut icon" content="favicon.webp" />
-	
-		<script src="/scram/scramjet.all.js"></script>
-		<script src="/baremux/index.js"></script>
-		
-		<link rel="stylesheet" href="index.css" />
-		<script src="register-sw.js" defer></script>
-		<script src="search.js" defer></script>
-		<script src="index.js" defer></script>
-	</head>
+    <!-- Core Proxy Scripts (Untouched) -->
+    <script src="/scram/scramjet.all.js"></script>
+    <script src="/baremux/index.js"></script>
+    <link rel="stylesheet" href="index.css" />
+    <script src="register-sw.js" defer></script>
+    <script src="search.js" defer></script>
+    <script src="index.js" defer></script>
+  </head>
 
-	<body>
-		<div title="Scramjet Logo" class="flex-center logo-wrapper header-center">
-			<img class="logo" src="sj.png" alt="Scramjet" />
-			<h1>Absolute Browser</h1>
-      <h2>By Fun Talk Club</h2>
-		</div>
-		<div class="flex-center desc left-margin">
-			<p>
-				Abosolute Browser is an experimental interception based web proxy designed to
-				evade internet censorship, bypass arbitrary web browser restrictions and
-				innovate web proxy technologies.
-			</p>
-		</div>
+  <body>
+    <div class="bg-glow"></div>
 
-		<form id="sj-form" class="flex-center">
-			<input
-				id="sj-search-engine"
-				value="https://google.com"
-				type="hidden"
-			/>
-			<input id="sj-address" type="text" placeholder="Enter a URL" />
-		</form>
-		<div class="desc left-margin">
-			<p id="sj-error"></p>
-			<pre id="sj-error-code"></pre>
-		</div>
-		<footer>
-			<div>
-				<a
-					title="Absolute Browser"
-					href="https://github.com"
-        >Mercury Workshop</a
-				>
-				<a
-					title="Absolute Browser"
-					href="https://github.com/Scramjet-Demo"
-					>GitHub</a
-				>
-				<a title="" href="credits.html">Credits</a>
-			</div>
-			<div>
-				<span>By Fun Talk Club</span>
-			</div>
-		</footer>
-	</body>
+    <!-- Top Browser Chrome Bar -->
+    <header class="topbar">
+      <div class="brand-pill">
+        <span class="status-dot"></span>
+        <span>Absolute Browser</span>
+      </div>
+      <div class="shortcuts">
+        <button type="button" class="chip" data-url="https://funtalkclub.com">Fun Talk Club</button>
+        <button type="button" class="chip" data-url="https://duckduckgo.com">DuckDuckGo</button>
+        <button type="button" class="chip" data-url="https://youtube.com">YouTube</button>
+        <button type="button" class="chip" data-url="https://discord.com">Discord</button>
+        <button type="button" class="chip" data-url="https://wikipedia.org">Wikipedia</button>
+      </div>
+    </header>
+
+    <!-- Main Center Stage -->
+    <main class="stage">
+      <div id="clock" class="clock">12:00</div>
+      <p id="date-display" class="date">Welcome back</p>
+
+      <div class="hero-title">
+        <div class="logo-box">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+          </svg>
+        </div>
+        <h1>Absolute Browser</h1>
+      </div>
+
+      <!-- Exact Form IDs Required by index.js -->
+      <form id="sj-form" class="search-form">
+        <input id="sj-search-engine" value="https://google.com" type="hidden" />
+        <div class="search-box">
+          <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input id="sj-address" type="text" placeholder="Search the web freely or enter any URL..." autocomplete="off" />
+          <button type="submit" class="go-btn">Go</button>
+        </div>
+      </form>
+
+      <!-- Error Output (Required by index.js) -->
+      <div class="error-box">
+        <p id="sj-error"></p>
+        <pre id="sj-error-code"></pre>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <span>Absolute Browser</span>
+      <span>By <a href="https://funtalkclub.com" target="_blank" rel="noopener">Fun Talk Club</a></span>
+    </footer>
+
+    <script>
+      // Live Clock
+      function updateClock() {
+        const now = new Date();
+        document.getElementById('clock').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        document.getElementById('date-display').textContent = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+      }
+      setInterval(updateClock, 1000);
+      updateClock();
+
+      // Quick-Access Shortcut Chips
+      document.querySelectorAll('.chip').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const input = document.getElementById('sj-address');
+          const form = document.getElementById('sj-form');
+          input.value = btn.getAttribute('data-url');
+          form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        });
+      });
+    </script>
+  </body>
 </html>
