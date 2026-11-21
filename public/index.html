@@ -4,77 +4,240 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no" />
     <title>Absolute Browser — By Fun Talk Club</title>
-
-    <!-- Core Proxy Scripts (Untouched) -->
     <script src="/scram/scramjet.all.js"></script>
     <script src="/baremux/index.js"></script>
     <link rel="stylesheet" href="index.css" />
     <script src="register-sw.js" defer></script>
     <script src="search.js" defer></script>
-    <script src="index.js" defer></script>
   </head>
-
   <body>
-    <div class="bg-glow"></div>
-
-    <!-- Top Browser Chrome Bar -->
-    <header class="topbar">
-      <div class="brand-pill">
-        <span class="status-dot"></span>
-        <span>Absolute Browser</span>
+    <div class="tab-strip">
+      <div id="tabs-list" class="tabs-list"></div>
+      <button type="button" id="new-tab-btn" class="new-tab-btn" title="New Tab">+</button>
+    </div>
+    <div class="nav-bar">
+      <div class="nav-controls">
+        <button type="button" id="btn-back" class="nav-btn" title="Back">&#8592;</button>
+        <button type="button" id="btn-forward" class="nav-btn" title="Forward">&#8594;</button>
+        <button type="button" id="btn-reload" class="nav-btn" title="Reload">&#8635;</button>
+        <button type="button" id="btn-home" class="nav-btn" title="Home">&#8962;</button>
       </div>
-      <div class="shortcuts">
-        <button type="button" class="chip" data-url="https://funtalkclub.com">Fun Talk Club</button>
-        <button type="button" class="chip" data-url="https://duckduckgo.com">DuckDuckGo</button>
-        <button type="button" class="chip" data-url="https://youtube.com">YouTube</button>
-        <button type="button" class="chip" data-url="https://discord.com">Discord</button>
-        <button type="button" class="chip" data-url="https://wikipedia.org">Wikipedia</button>
-      </div>
-    </header>
-
-    <!-- Main Center Stage -->
-    <main class="stage">
-      <div id="clock" class="clock">12:00</div>
-      <p id="date-display" class="date">Welcome back</p>
-
-      <div class="hero-title">
-        <div class="logo-box">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
-          </svg>
-        </div>
-        <h1>Absolute Browser</h1>
-      </div>
-
-      <!-- Exact Form IDs Required by index.js -->
-      <form id="sj-form" class="search-form">
-        <input id="sj-search-engine" value="https://google.com" type="hidden" />
-        <div class="search-box">
-          <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
-          <input id="sj-address" type="text" placeholder="Search the web freely or enter any URL..." autocomplete="off" />
-          <button type="submit" class="go-btn">Go</button>
-        </div>
+      <form id="url-form" class="url-bar">
+        <input id="url-input" type="text" placeholder="Search Google or enter any website URL..." autocomplete="off" />
+        <button type="button" id="btn-bookmark" class="bookmark-star" title="Bookmark this page">☆</button>
       </form>
-
-      <!-- Error Output (Required by index.js) -->
-      <div class="error-box">
-        <p id="sj-error"></p>
-        <pre id="sj-error-code"></pre>
+      <div class="brand-badge">
+        <span class="status-dot"></span>
+        <span>Absolute</span>
       </div>
+    </div>
+    <div id="bookmarks-bar" class="bookmarks-bar hidden"></div>
+    <main class="viewport">
+      <div class="bg-glow"></div>
+      <div id="start-page" class="start-page">
+        <div id="clock" class="clock">12:00</div>
+        <p id="date-display" class="date">Welcome back</p>
+        <div class="hero-title"><h1>Absolute Browser</h1></div>
+        <form id="center-form" class="search-form">
+          <div class="search-box">
+            <input id="center-input" type="text" placeholder="Search the web freely or enter any URL..." autocomplete="off" />
+            <button type="submit" class="go-btn">Go</button>
+          </div>
+        </form>
+        <div class="quick-grid">
+          <button type="button" class="quick-card" data-url="https://funtalkclub.com">Fun Talk Club</button>
+          <button type="button" class="quick-card" data-url="https://youtube.com">YouTube</button>
+          <button type="button" class="quick-card" data-url="https://discord.com">Discord</button>
+          <button type="button" class="quick-card" data-url="https://google.com">Google</button>
+          <button type="button" class="quick-card" data-url="https://wikipedia.org">Wikipedia</button>
+          <button type="button" class="quick-card" data-url="https://github.com">GitHub</button>
+        </div>
+        <div id="error-box" class="error-box hidden">
+          <p id="sj-error"></p>
+          <pre id="sj-error-code"></pre>
+        </div>
+        <footer class="footer">
+          <span>Absolute Browser</span>
+          <span>By <a href="https://funtalkclub.com" target="_blank" rel="noopener">Fun Talk Club</a></span>
+        </footer>
+      </div>
+      <div id="frames-host" class="frames-host"></div>
     </main>
-
-    <!-- Footer -->
-    <footer class="footer">
-      <span>Absolute Browser</span>
-      <span>By <a href="https://funtalkclub.com" target="_blank" rel="noopener">Fun Talk Club</a></span>
-    </footer>
-
     <script>
-      // Live Clock
+      let tabs = [];
+      let activeTabId = null;
+      let bookmarks = JSON.parse(localStorage.getItem('ab_bookmarks') || '[]');
+      let scramjet = null;
+      let engineReady = false;
+
+      async function bootEngine() {
+        try {
+          if (typeof registerSW === 'function') await registerSW();
+          if (typeof ScramjetController !== 'undefined') {
+            scramjet = new ScramjetController({
+              files: {
+                wasm: '/scram/scramjet.wasm.js',
+                worker: '/scram/scramjet.worker.js',
+                client: '/scram/scramjet.client.js',
+                shared: '/scram/scramjet.shared.js',
+                sync: '/scram/scramjet.sync.js',
+              },
+            });
+            await scramjet.init();
+          }
+          if (typeof BareMux !== 'undefined') {
+            const conn = new BareMux.BareMuxConnection('/baremux/worker.js');
+            const wispUrl = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/wisp/';
+            await conn.setTransport('/libcurl/index.mjs', [{ wisp: wispUrl }]);
+          }
+          engineReady = true;
+        } catch (err) {
+          document.getElementById('error-box').classList.remove('hidden');
+          document.getElementById('sj-error').textContent = 'Engine Notice:';
+          document.getElementById('sj-error-code').textContent = err.toString();
+        }
+      }
+      const enginePromise = bootEngine();
+
+      function resolveUrl(raw) {
+        if (typeof search === 'function') return search(raw, 'https://google.com');
+        const t = raw.trim();
+        if (!t) return '';
+        if (/^https?:\/\//i.test(t)) return t;
+        if (t.includes('.') && !t.includes(' ')) return 'https://' + t;
+        return 'https://google.com' + encodeURIComponent(t);
+      }
+
+      function encodeTarget(url) {
+        if (scramjet && typeof scramjet.encodeUrl === 'function') return scramjet.encodeUrl(url);
+        return '/scramjet/' + encodeURIComponent(url);
+      }
+
+      function createTab(initialUrl = '') {
+        const id = 't-' + Date.now() + Math.floor(Math.random() * 100);
+        tabs.push({ id, title: 'New Tab', url: '' });
+        const iframe = document.createElement('iframe');
+        iframe.id = 'frame-' + id;
+        iframe.className = 'tab-frame hidden';
+        document.getElementById('frames-host').appendChild(iframe);
+        switchTab(id);
+        if (initialUrl) navigate(initialUrl);
+      }
+
+      function switchTab(id) {
+        activeTabId = id;
+        const tab = tabs.find((t) => t.id === id);
+        if (!tab) return;
+        document.querySelectorAll('.tab-frame').forEach((f) => f.classList.add('hidden'));
+        const activeFrame = document.getElementById('frame-' + id);
+        if (tab.url) {
+          document.getElementById('start-page').classList.add('hidden');
+          if (activeFrame) activeFrame.classList.remove('hidden');
+          document.getElementById('url-input').value = tab.url;
+        } else {
+          document.getElementById('start-page').classList.remove('hidden');
+          document.getElementById('url-input').value = '';
+          document.getElementById('center-input').value = '';
+        }
+        updateBookmarkBtn();
+        renderTabs();
+      }
+      function closeTab(e, id) {
+        e.stopPropagation();
+        if (tabs.length === 1) return goHome();
+        const idx = tabs.findIndex((t) => t.id === id);
+        tabs = tabs.filter((t) => t.id !== id);
+        const frame = document.getElementById('frame-' + id);
+        if (frame) frame.remove();
+        if (activeTabId === id) switchTab(tabs[Math.max(0, idx - 1)].id);
+        else renderTabs();
+      }
+
+      function renderTabs() {
+        const list = document.getElementById('tabs-list');
+        list.innerHTML = '';
+        tabs.forEach((tab) => {
+          const el = document.createElement('div');
+          el.className = 'tab-item' + (tab.id === activeTabId ? ' active' : '');
+          el.onclick = () => switchTab(tab.id);
+          const titleSpan = document.createElement('span');
+          titleSpan.className = 'tab-title';
+          titleSpan.textContent = tab.title;
+          const closeBtn = document.createElement('button');
+          closeBtn.type = 'button';
+          closeBtn.className = 'tab-close';
+          closeBtn.textContent = '×';
+          closeBtn.onclick = (e) => closeTab(e, tab.id);
+          el.appendChild(titleSpan);
+          el.appendChild(closeBtn);
+          list.appendChild(el);
+        });
+      }
+
+      async function navigate(rawInput) {
+        const target = resolveUrl(rawInput);
+        if (!target) return;
+        if (!engineReady) await enginePromise;
+        const tab = tabs.find((t) => t.id === activeTabId);
+        if (!tab) return;
+        tab.url = target;
+        try { tab.title = new URL(target).hostname.replace(/^www\./, ''); } catch { tab.title = target; }
+        const frame = document.getElementById('frame-' + tab.id);
+        if (frame) frame.src = encodeTarget(target);
+        switchTab(tab.id);
+      }
+
+      function goHome() {
+        const tab = tabs.find((t) => t.id === activeTabId);
+        if (!tab) return;
+        tab.url = '';
+        tab.title = 'New Tab';
+        const frame = document.getElementById('frame-' + tab.id);
+        if (frame) frame.src = 'about:blank';
+        switchTab(tab.id);
+      }
+
+      document.getElementById('new-tab-btn').onclick = () => createTab();
+      document.getElementById('btn-home').onclick = goHome;
+      document.getElementById('btn-back').onclick = () => { const f = document.getElementById('frame-' + activeTabId); if (f && f.contentWindow) f.contentWindow.history.back(); };
+      document.getElementById('btn-forward').onclick = () => { const f = document.getElementById('frame-' + activeTabId); if (f && f.contentWindow) f.contentWindow.history.forward(); };
+      document.getElementById('btn-reload').onclick = () => { const f = document.getElementById('frame-' + activeTabId); if (f && f.src && f.src !== 'about:blank') f.src = f.src; };
+      document.getElementById('url-form').onsubmit = (e) => { e.preventDefault(); navigate(document.getElementById('url-input').value); };
+      document.getElementById('center-form').onsubmit = (e) => { e.preventDefault(); navigate(document.getElementById('center-input').value); };
+      document.querySelectorAll('.quick-card').forEach((btn) => { btn.onclick = () => navigate(btn.getAttribute('data-url')); });
+
+      function updateBookmarkBtn() {
+        const tab = tabs.find((t) => t.id === activeTabId);
+        const btn = document.getElementById('btn-bookmark');
+        if (tab && tab.url && bookmarks.some((b) => b.url === tab.url)) { btn.textContent = '★'; btn.classList.add('saved'); }
+        else { btn.textContent = '☆'; btn.classList.remove('saved'); }
+      }
+
+      function renderBookmarks() {
+        const bar = document.getElementById('bookmarks-bar');
+        if (bookmarks.length === 0) return bar.classList.add('hidden');
+        bar.classList.remove('hidden');
+        bar.innerHTML = '';
+        bookmarks.forEach((b) => {
+          const item = document.createElement('button');
+          item.type = 'button';
+          item.className = 'bookmark-chip';
+          item.textContent = b.title;
+          item.onclick = () => navigate(b.url);
+          bar.appendChild(item);
+        });
+      }
+
+      document.getElementById('btn-bookmark').onclick = () => {
+        const tab = tabs.find((t) => t.id === activeTabId);
+        if (!tab || !tab.url) return;
+        const exists = bookmarks.some((b) => b.url === tab.url);
+        bookmarks = exists ? bookmarks.filter((b) => b.url !== tab.url) : [...bookmarks, { title: tab.title, url: tab.url }];
+        localStorage.setItem('ab_bookmarks', JSON.stringify(bookmarks));
+        updateBookmarkBtn();
+        renderBookmarks();
+      };
+
       function updateClock() {
         const now = new Date();
         document.getElementById('clock').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -82,16 +245,8 @@
       }
       setInterval(updateClock, 1000);
       updateClock();
-
-      // Quick-Access Shortcut Chips
-      document.querySelectorAll('.chip').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const input = document.getElementById('sj-address');
-          const form = document.getElementById('sj-form');
-          input.value = btn.getAttribute('data-url');
-          form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-        });
-      });
+      renderBookmarks();
+      createTab();
     </script>
   </body>
 </html>
