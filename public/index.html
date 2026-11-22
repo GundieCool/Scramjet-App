@@ -73,8 +73,9 @@
       async function bootEngine() {
         try {
           if (typeof registerSW === 'function') await registerSW();
-          if (typeof ScramjetController !== 'undefined') {
-            scramjet = new ScramjetController({
+          if (typeof $scramjetLoadController === 'function') {
+  const { ScramjetController } = $scramjetLoadController();
+  scramjet = new ScramjetController({
               files: {
                 wasm: '/scram/scramjet.wasm.js',
                 worker: '/scram/scramjet.worker.js',
