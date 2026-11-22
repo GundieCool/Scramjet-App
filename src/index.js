@@ -86,7 +86,7 @@ function shutdown() {
 	process.exit(0);
 }
 
-let port = parseInt(process.env.PORT || "");
+let port = parseInt(process.env.SERVER_PORT || process.env.PORT || "");
 
 if (isNaN(port)) port = 8080;
 
