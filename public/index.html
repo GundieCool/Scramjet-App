@@ -64,63 +64,37 @@
       <div id="frames-host" class="frames-host"></div>
     </main>
     <script>
+      const { ScramjetController } = $scramjetLoadController();
+      const scramjet = new ScramjetController({
+        files: {
+          wasm: "/scram/scramjet.wasm.wasm",
+          all: "/scram/scramjet.all.js",
+          sync: "/scram/scramjet.sync.js",
+        },
+      });
+      scramjet.init();
+
+      const connection = new BareMux.BareMuxConnection("/baremux/worker.js");
       let tabs = [];
       let activeTabId = null;
-      let bookmarks = JSON.parse(localStorage.getItem('ab_bookmarks') || '[]');
-      let scramjet = null;
-      let engineReady = false;
-
-      async function bootEngine() {
-        try {
-          if (typeof registerSW === 'function') await registerSW();
-          if (typeof $scramjetLoadController === 'function') {
-  const { ScramjetController } = $scramjetLoadController();
-  scramjet = new ScramjetController({
-              files: {
-                wasm: '/scram/scramjet.wasm.js',
-                worker: '/scram/scramjet.worker.js',
-                client: '/scram/scramjet.client.js',
-                shared: '/scram/scramjet.shared.js',
-                sync: '/scram/scramjet.sync.js',
-              },
-            });
-            await scramjet.init();
-          }
-          if (typeof BareMux !== 'undefined') {
-            const conn = new BareMux.BareMuxConnection('/baremux/worker.js');
-            const wispUrl = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/wisp/';
-            await conn.setTransport('/libcurl/index.mjs', [{ wisp: wispUrl }]);
-          }
-          engineReady = true;
-        } catch (err) {
-          document.getElementById('error-box').classList.remove('hidden');
-          document.getElementById('sj-error').textContent = 'Engine Notice:';
-          document.getElementById('sj-error-code').textContent = err.toString();
-        }
-      }
-      const enginePromise = bootEngine();
+      let bookmarks = JSON.parse(localStorage.getItem("ab_bookmarks") || "[]");
 
       function resolveUrl(raw) {
-        if (typeof search === 'function') return search(raw, 'https://google.com');
+        if (typeof search === "function") return search(raw, "https://google.com");
         const t = raw.trim();
-        if (!t) return '';
+        if (!t) return "";
         if (/^https?:\/\//i.test(t)) return t;
-        if (t.includes('.') && !t.includes(' ')) return 'https://' + t;
-        return 'https://google.com' + encodeURIComponent(t);
+        if (t.includes(".") && !t.includes(" ")) return "https://" + t;
+        return "https://google.com" + encodeURIComponent(t);
       }
 
-      function encodeTarget(url) {
-        if (scramjet && typeof scramjet.encodeUrl === 'function') return scramjet.encodeUrl(url);
-        return '/scramjet/' + encodeURIComponent(url);
-      }
-
-      function createTab(initialUrl = '') {
-        const id = 't-' + Date.now() + Math.floor(Math.random() * 100);
-        tabs.push({ id, title: 'New Tab', url: '' });
-        const iframe = document.createElement('iframe');
-        iframe.id = 'frame-' + id;
-        iframe.className = 'tab-frame hidden';
-        document.getElementById('frames-host').appendChild(iframe);
+      function createTab(initialUrl = "") {
+        const id = "t-" + Date.now() + Math.floor(Math.random() * 100);
+        const sjFrame = scramjet.createFrame();
+        sjFrame.frame.id = "frame-" + id;
+        sjFrame.frame.className = "tab-frame hidden";
+        document.getElementById("frames-host").appendChild(sjFrame.frame);
+        tabs.push({ id, title: "New Tab", url: "", sjFrame });
         switchTab(id);
         if (initialUrl) navigate(initialUrl);
       }
@@ -129,16 +103,15 @@
         activeTabId = id;
         const tab = tabs.find((t) => t.id === id);
         if (!tab) return;
-        document.querySelectorAll('.tab-frame').forEach((f) => f.classList.add('hidden'));
-        const activeFrame = document.getElementById('frame-' + id);
+        document.querySelectorAll(".tab-frame").forEach((f) => f.classList.add("hidden"));
         if (tab.url) {
-          document.getElementById('start-page').classList.add('hidden');
-          if (activeFrame) activeFrame.classList.remove('hidden');
-          document.getElementById('url-input').value = tab.url;
+          document.getElementById("start-page").classList.add("hidden");
+          tab.sjFrame.frame.classList.remove("hidden");
+          document.getElementById("url-input").value = tab.url;
         } else {
-          document.getElementById('start-page').classList.remove('hidden');
-          document.getElementById('url-input').value = '';
-          document.getElementById('center-input').value = '';
+          document.getElementById("start-page").classList.remove("hidden");
+          document.getElementById("url-input").value = "";
+          document.getElementById("center-input").value = "";
         }
         updateBookmarkBtn();
         renderTabs();
@@ -147,27 +120,27 @@
         e.stopPropagation();
         if (tabs.length === 1) return goHome();
         const idx = tabs.findIndex((t) => t.id === id);
+        const tab = tabs[idx];
+        if (tab && tab.sjFrame) tab.sjFrame.frame.remove();
         tabs = tabs.filter((t) => t.id !== id);
-        const frame = document.getElementById('frame-' + id);
-        if (frame) frame.remove();
         if (activeTabId === id) switchTab(tabs[Math.max(0, idx - 1)].id);
         else renderTabs();
       }
 
       function renderTabs() {
-        const list = document.getElementById('tabs-list');
-        list.innerHTML = '';
+        const list = document.getElementById("tabs-list");
+        list.innerHTML = "";
         tabs.forEach((tab) => {
-          const el = document.createElement('div');
-          el.className = 'tab-item' + (tab.id === activeTabId ? ' active' : '');
+          const el = document.createElement("div");
+          el.className = "tab-item" + (tab.id === activeTabId ? " active" : "");
           el.onclick = () => switchTab(tab.id);
-          const titleSpan = document.createElement('span');
-          titleSpan.className = 'tab-title';
+          const titleSpan = document.createElement("span");
+          titleSpan.className = "tab-title";
           titleSpan.textContent = tab.title;
-          const closeBtn = document.createElement('button');
-          closeBtn.type = 'button';
-          closeBtn.className = 'tab-close';
-          closeBtn.textContent = '×';
+          const closeBtn = document.createElement("button");
+          closeBtn.type = "button";
+          closeBtn.className = "tab-close";
+          closeBtn.textContent = "×";
           closeBtn.onclick = (e) => closeTab(e, tab.id);
           el.appendChild(titleSpan);
           el.appendChild(closeBtn);
@@ -178,71 +151,80 @@
       async function navigate(rawInput) {
         const target = resolveUrl(rawInput);
         if (!target) return;
-        if (!engineReady) await enginePromise;
+        try {
+          if (typeof registerSW === "function") await registerSW();
+          const wispUrl = (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/wisp/";
+          if ((await connection.getTransport()) !== "/libcurl/index.mjs") {
+            await connection.setTransport("/libcurl/index.mjs", [{ websocket: wispUrl }]);
+          }
+        } catch (err) {
+          document.getElementById("error-box").classList.remove("hidden");
+          document.getElementById("sj-error").textContent = "Engine Notice:";
+          document.getElementById("sj-error-code").textContent = err.toString();
+          return;
+        }
         const tab = tabs.find((t) => t.id === activeTabId);
         if (!tab) return;
         tab.url = target;
-        try { tab.title = new URL(target).hostname.replace(/^www\./, ''); } catch { tab.title = target; }
-        const frame = document.getElementById('frame-' + tab.id);
-        if (frame) frame.src = encodeTarget(target);
+        try { tab.title = new URL(target).hostname.replace(/^www\./, ""); } catch { tab.title = target; }
         switchTab(tab.id);
+        tab.sjFrame.go(target);
       }
 
       function goHome() {
         const tab = tabs.find((t) => t.id === activeTabId);
         if (!tab) return;
-        tab.url = '';
-        tab.title = 'New Tab';
-        const frame = document.getElementById('frame-' + tab.id);
-        if (frame) frame.src = 'about:blank';
+        tab.url = "";
+        tab.title = "New Tab";
+        tab.sjFrame.frame.src = "about:blank";
         switchTab(tab.id);
       }
 
-      document.getElementById('new-tab-btn').onclick = () => createTab();
-      document.getElementById('btn-home').onclick = goHome;
-      document.getElementById('btn-back').onclick = () => { const f = document.getElementById('frame-' + activeTabId); if (f && f.contentWindow) f.contentWindow.history.back(); };
-      document.getElementById('btn-forward').onclick = () => { const f = document.getElementById('frame-' + activeTabId); if (f && f.contentWindow) f.contentWindow.history.forward(); };
-      document.getElementById('btn-reload').onclick = () => { const f = document.getElementById('frame-' + activeTabId); if (f && f.src && f.src !== 'about:blank') f.src = f.src; };
-      document.getElementById('url-form').onsubmit = (e) => { e.preventDefault(); navigate(document.getElementById('url-input').value); };
-      document.getElementById('center-form').onsubmit = (e) => { e.preventDefault(); navigate(document.getElementById('center-input').value); };
-      document.querySelectorAll('.quick-card').forEach((btn) => { btn.onclick = () => navigate(btn.getAttribute('data-url')); });
+      document.getElementById("new-tab-btn").onclick = () => createTab();
+      document.getElementById("btn-home").onclick = goHome;
+      document.getElementById("btn-back").onclick = () => { const t = tabs.find((x) => x.id === activeTabId); if (t && t.sjFrame.frame.contentWindow) t.sjFrame.frame.contentWindow.history.back(); };
+      document.getElementById("btn-forward").onclick = () => { const t = tabs.find((x) => x.id === activeTabId); if (t && t.sjFrame.frame.contentWindow) t.sjFrame.frame.contentWindow.history.forward(); };
+      document.getElementById("btn-reload").onclick = () => { const t = tabs.find((x) => x.id === activeTabId); if (t && t.url) t.sjFrame.go(t.url); };
+      document.getElementById("url-form").onsubmit = (e) => { e.preventDefault(); navigate(document.getElementById("url-input").value); };
+      document.getElementById("center-form").onsubmit = (e) => { e.preventDefault(); navigate(document.getElementById("center-input").value); };
+      document.querySelectorAll(".quick-card").forEach((btn) => { btn.onclick = () => navigate(btn.getAttribute("data-url")); });
 
       function updateBookmarkBtn() {
         const tab = tabs.find((t) => t.id === activeTabId);
-        const btn = document.getElementById('btn-bookmark');
-        if (tab && tab.url && bookmarks.some((b) => b.url === tab.url)) { btn.textContent = '★'; btn.classList.add('saved'); }
-        else { btn.textContent = '☆'; btn.classList.remove('saved'); }
+        const btn = document.getElementById("btn-bookmark");
+        if (tab && tab.url && bookmarks.some((b) => b.url === tab.url)) { btn.textContent = "★"; btn.classList.add("saved"); }
+        else { btn.textContent = "☆"; btn.classList.remove("saved"); }
       }
 
       function renderBookmarks() {
-        const bar = document.getElementById('bookmarks-bar');
-        if (bookmarks.length === 0) return bar.classList.add('hidden');
-        bar.classList.remove('hidden');
-        bar.innerHTML = '';
+        const bar = document.getElementById("bookmarks-bar");
+        if (bookmarks.length === 0) return bar.classList.add("hidden");
+        bar.classList.remove("hidden");
+        bar.innerHTML = "";
         bookmarks.forEach((b) => {
-          const item = document.createElement('button');
-          item.type = 'button';
-          item.className = 'bookmark-chip';
+          const item = document.createElement("button");
+          item.type = "button";
+          item.className = "bookmark-chip";
           item.textContent = b.title;
           item.onclick = () => navigate(b.url);
           bar.appendChild(item);
         });
       }
 
-      document.getElementById('btn-bookmark').onclick = () => {
+      document.getElementById("btn-bookmark").onclick = () => {
         const tab = tabs.find((t) => t.id === activeTabId);
         if (!tab || !tab.url) return;
         const exists = bookmarks.some((b) => b.url === tab.url);
         bookmarks = exists ? bookmarks.filter((b) => b.url !== tab.url) : [...bookmarks, { title: tab.title, url: tab.url }];
-        localStorage.setItem('ab_bookmarks', JSON.stringify(bookmarks));
+        localStorage.setItem("ab_bookmarks", JSON.stringify(bookmarks));
         updateBookmarkBtn();
         renderBookmarks();
       };
 
       function updateClock() {
         const now = new Date();
-        document.getElementById('clock').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        document.getElementById('date-display').textContent = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+        document.getElementById("clock").textContent = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        document.getElementById("date-display").textContent = now.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
       }
       setInterval(updateClock, 1000);
       updateClock();
