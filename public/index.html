@@ -25,6 +25,12 @@
       <form id="url-form" class="url-bar">
         <input id="url-input" type="text" placeholder="Search Google or enter any website URL..." autocomplete="off" />
         <button type="button" id="btn-bookmark" class="bookmark-star" title="Bookmark this page">☆</button>
+        <div class="menu-wrap">
+          <button type="button" id="btn-menu" class="menu-btn" title="More options">&#8942;</button>
+          <div id="menu-popup" class="menu-popup hidden">
+            <button type="button" id="btn-fullscreen" class="menu-item">&#x26F6; Fullscreen</button>
+          </div>
+        </div>
       </form>
       <div class="brand-badge">
         <span class="status-dot"></span>
@@ -63,7 +69,7 @@
       </div>
       <div id="frames-host" class="frames-host"></div>
     </main>
-    <script>
+        <script>
       const { ScramjetController } = $scramjetLoadController();
       const scramjet = new ScramjetController({
         files: {
@@ -80,12 +86,37 @@
       let bookmarks = JSON.parse(localStorage.getItem("ab_bookmarks") || "[]");
 
       function resolveUrl(raw) {
-        if (typeof search === "function") return search(raw, "https://google.com");
         const t = raw.trim();
         if (!t) return "";
         if (/^https?:\/\//i.test(t)) return t;
         if (t.includes(".") && !t.includes(" ")) return "https://" + t;
         return "https://google.com" + encodeURIComponent(t);
+      }
+
+      function getFavicon(url) {
+        try {
+          const host = new URL(url).hostname;
+          return "https://duckduckgo.com" + host + ".ico";
+        } catch {
+          return "";
+        }
+      }
+
+      function syncTabMeta(tab, realUrl) {
+        if (!realUrl || realUrl === "about:blank" || realUrl.startsWith(location.origin + "/scram")) return;
+        tab.url = realUrl;
+        tab.favicon = getFavicon(realUrl);
+        try {
+          const docTitle = tab.sjFrame.frame.contentDocument && tab.sjFrame.frame.contentDocument.title;
+          tab.title = docTitle && docTitle.trim() ? docTitle.trim() : new URL(realUrl).hostname.replace(/^www\./, "");
+        } catch {
+          try { tab.title = new URL(realUrl).hostname.replace(/^www\./, ""); } catch {}
+        }
+        if (tab.id === activeTabId && document.activeElement !== document.getElementById("url-input")) {
+          document.getElementById("url-input").value = tab.url;
+          updateBookmarkBtn();
+        }
+        renderTabs();
       }
 
       function createTab(initialUrl = "") {
@@ -94,7 +125,19 @@
         sjFrame.frame.id = "frame-" + id;
         sjFrame.frame.className = "tab-frame hidden";
         document.getElementById("frames-host").appendChild(sjFrame.frame);
-        tabs.push({ id, title: "New Tab", url: "", sjFrame });
+
+        const tab = { id, title: "New Tab", url: "", favicon: "", sjFrame };
+        tabs.push(tab);
+
+        if (typeof sjFrame.addEventListener === "function") {
+          sjFrame.addEventListener("urlchange", (e) => {
+            if (e && e.url) syncTabMeta(tab, e.url);
+          });
+        }
+        sjFrame.frame.addEventListener("load", () => {
+          if (sjFrame.url) syncTabMeta(tab, sjFrame.url);
+        });
+
         switchTab(id);
         if (initialUrl) navigate(initialUrl);
       }
@@ -116,7 +159,7 @@
         updateBookmarkBtn();
         renderTabs();
       }
-      function closeTab(e, id) {
+                function closeTab(e, id) {
         e.stopPropagation();
         if (tabs.length === 1) return goHome();
         const idx = tabs.findIndex((t) => t.id === id);
@@ -134,14 +177,25 @@
           const el = document.createElement("div");
           el.className = "tab-item" + (tab.id === activeTabId ? " active" : "");
           el.onclick = () => switchTab(tab.id);
+
+          if (tab.favicon) {
+            const img = document.createElement("img");
+            img.className = "tab-favicon";
+            img.src = tab.favicon;
+            img.onerror = () => img.remove();
+            el.appendChild(img);
+          }
+
           const titleSpan = document.createElement("span");
           titleSpan.className = "tab-title";
           titleSpan.textContent = tab.title;
+
           const closeBtn = document.createElement("button");
           closeBtn.type = "button";
           closeBtn.className = "tab-close";
           closeBtn.textContent = "×";
           closeBtn.onclick = (e) => closeTab(e, tab.id);
+
           el.appendChild(titleSpan);
           el.appendChild(closeBtn);
           list.appendChild(el);
@@ -166,6 +220,7 @@
         const tab = tabs.find((t) => t.id === activeTabId);
         if (!tab) return;
         tab.url = target;
+        tab.favicon = getFavicon(target);
         try { tab.title = new URL(target).hostname.replace(/^www\./, ""); } catch { tab.title = target; }
         switchTab(tab.id);
         tab.sjFrame.go(target);
@@ -175,10 +230,27 @@
         const tab = tabs.find((t) => t.id === activeTabId);
         if (!tab) return;
         tab.url = "";
+        tab.favicon = "";
         tab.title = "New Tab";
         tab.sjFrame.frame.src = "about:blank";
         switchTab(tab.id);
       }
+
+      // Three-dots menu & Fullscreen button
+      const menuPopup = document.getElementById("menu-popup");
+      document.getElementById("btn-menu").onclick = (e) => {
+        e.stopPropagation();
+        menuPopup.classList.toggle("hidden");
+      };
+      document.addEventListener("click", () => menuPopup.classList.add("hidden"));
+
+      document.getElementById("btn-fullscreen").onclick = () => {
+        menuPopup.classList.add("hidden");
+        const tab = tabs.find((t) => t.id === activeTabId);
+        const targetEl = tab && tab.url ? tab.sjFrame.frame : document.documentElement;
+        if (targetEl.requestFullscreen) targetEl.requestFullscreen();
+        else if (targetEl.webkitRequestFullscreen) targetEl.webkitRequestFullscreen();
+      };
 
       document.getElementById("new-tab-btn").onclick = () => createTab();
       document.getElementById("btn-home").onclick = goHome;
@@ -233,3 +305,4 @@
     </script>
   </body>
 </html>
+
