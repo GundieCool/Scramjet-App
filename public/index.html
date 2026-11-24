@@ -34,7 +34,7 @@
       </form>
       <div class="brand-badge">
         <span class="status-dot"></span>
-        <span>Absolute</span>
+        <span>V0.2</span>
       </div>
     </div>
     <div id="bookmarks-bar" class="bookmarks-bar hidden"></div>
@@ -90,7 +90,7 @@
         if (!t) return "";
         if (/^https?:\/\//i.test(t)) return t;
         if (t.includes(".") && !t.includes(" ")) return "https://" + t;
-        return "https://google.com" + encodeURIComponent(t);
+        return "https://google.com/search?q=" + encodeURIComponent(t);
       }
 
       function getFavicon(url) {
